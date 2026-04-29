@@ -1,7 +1,7 @@
 import torchvision.transforms as standard_transforms
 from .SHHA import SHHA
 
-# DeNormalize used to get original images
+# DeNormalize usado para recuperar as imagens originais
 class DeNormalize(object):
     def __init__(self, mean, std):
         self.mean = mean
@@ -13,15 +13,15 @@ class DeNormalize(object):
         return tensor
 
 def loading_data(data_root):
-    # the pre-proccssing transform
+    # transformação de pré-processamento
     transform = standard_transforms.Compose([
         standard_transforms.ToTensor(), 
         standard_transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                     std=[0.229, 0.224, 0.225]),
     ])
-    # create the training dataset
+    # cria o dataset de treino
     train_set = SHHA(data_root, train=True, transform=transform, patch=True, flip=True)
-    # create the validation dataset
+    # cria o dataset de validação
     val_set = SHHA(data_root, train=False, transform=transform)
 
     return train_set, val_set

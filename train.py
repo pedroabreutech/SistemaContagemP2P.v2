@@ -26,22 +26,22 @@ def get_args_parser():
     parser.add_argument('--clip_max_norm', default=0.1, type=float,
                         help='gradient clipping max norm')
 
-    # Model parameters
+    # Parâmetros do modelo
     parser.add_argument('--frozen_weights', type=str, default=None,
                         help="Path to the pretrained model. If set, only the mask head will be trained")
 
-    # * Backbone
+    # * Extrator de características (Backbone)
     parser.add_argument('--backbone', default='vgg16_bn', type=str,
                         help="Name of the convolutional backbone to use")
 
-    # * Matcher
+    # * Casador (Matcher)
     parser.add_argument('--set_cost_class', default=1, type=float,
                         help="Class coefficient in the matching cost")
 
     parser.add_argument('--set_cost_point', default=0.05, type=float,
                         help="L1 point coefficient in the matching cost")
 
-    # * Loss coefficients
+    # * Coeficientes de perda
     parser.add_argument('--point_loss_coef', default=0.0002, type=float)
 
     parser.add_argument('--eos_coef', default=0.5, type=float,
@@ -51,7 +51,7 @@ def get_args_parser():
     parser.add_argument('--line', default=2, type=int,
                         help="line number of anchor points")
 
-    # dataset parameters
+    # Parâmetros do dataset
     parser.add_argument('--dataset_file', default='SHHA')
     parser.add_argument('--data_root', default='./new_public_density_data',
                         help='path where the dataset is')
@@ -77,26 +77,26 @@ def get_args_parser():
 
 def main(args):
     os.environ["CUDA_VISIBLE_DEVICES"] = '{}'.format(args.gpu_id)
-    # create the logging file
+    # cria o arquivo de log
     run_log_name = os.path.join(args.output_dir, 'run_log.txt')
     with open(run_log_name, "w") as log_file:
         log_file.write('Eval Log %s\n' % time.strftime("%c"))
 
     if args.frozen_weights is not None:
         assert args.masks, "Frozen training is meant for segmentation only"
-    # backup the arguments
+    # salva os argumentos
     print(args)
     with open(run_log_name, "a") as log_file:
         log_file.write("{}".format(args))
     device = torch.device('cuda')
-    # fix the seed for reproducibility
+    # fixa a seed para reprodutibilidade
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    # get the P2PNet model
+    # obtém o modelo P2PNet
     model, criterion = build_model(args, training=True)
-    # move to GPU
+    # move para GPU
     model.to(device)
     criterion.to(device)
 
@@ -104,7 +104,7 @@ def main(args):
 
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
-    # use different optimation params for different parts of the model
+    # usa parâmetros de otimização diferentes para partes distintas do modelo
     param_dicts = [
         {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
@@ -112,20 +112,20 @@ def main(args):
             "lr": args.lr_backbone,
         },
     ]
-    # Adam is used by default
+    # Adam é usado por padrão
     optimizer = torch.optim.Adam(param_dicts, lr=args.lr)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
-    # create the dataset
+    # cria o dataset
     loading_data = build_dataset(args=args)
-    # create the training and valiation set
+    # cria os conjuntos de treino e validação
     train_set, val_set = loading_data(args.data_root)
-    # create the sampler used during training
+    # cria o sampler usado no treino
     sampler_train = torch.utils.data.RandomSampler(train_set)
     sampler_val = torch.utils.data.SequentialSampler(val_set)
 
     batch_sampler_train = torch.utils.data.BatchSampler(
         sampler_train, args.batch_size, drop_last=True)
-    # the dataloader for training
+    # dataloader de treino
     data_loader_train = DataLoader(train_set, batch_sampler=batch_sampler_train,
                                    collate_fn=utils.collate_fn_crowd, num_workers=args.num_workers)
 
@@ -135,7 +135,7 @@ def main(args):
     if args.frozen_weights is not None:
         checkpoint = torch.load(args.frozen_weights, map_location='cpu')
         model_without_ddp.detr.load_state_dict(checkpoint['model'])
-    # resume the weights and training state if exists
+    # retoma os pesos e estado de treino se existirem
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'])
@@ -146,21 +146,21 @@ def main(args):
 
     print("Start training")
     start_time = time.time()
-    # save the performance during the training
+    # salva o desempenho durante o treino
     mae = []
     mse = []
-    # the logger writer
+    # writer de logs
     writer = SummaryWriter(args.tensorboard_dir)
     
     step = 0
-    # training starts here
+    # o treino começa aqui
     for epoch in range(args.start_epoch, args.epochs):
         t1 = time.time()
         stat = train_one_epoch(
             model, criterion, data_loader_train, optimizer, device, epoch,
             args.clip_max_norm)
 
-        # record the training states after every epoch
+        # registra os estados de treino a cada época
         if writer is not None:
             with open(run_log_name, "a") as log_file:
                 log_file.write("loss/loss@{}: {}".format(epoch, stat['loss']))
@@ -174,14 +174,14 @@ def main(args):
               (epoch, optimizer.param_groups[0]['lr'], t2 - t1))
         with open(run_log_name, "a") as log_file:
             log_file.write('[ep %d][lr %.7f][%.2fs]' % (epoch, optimizer.param_groups[0]['lr'], t2 - t1))
-        # change lr according to the scheduler
+        # altera a taxa de aprendizado conforme o scheduler
         lr_scheduler.step()
-        # save latest weights every epoch
+        # salva os pesos mais recentes a cada época
         checkpoint_latest_path = os.path.join(args.checkpoints_dir, 'latest.pth')
         torch.save({
             'model': model_without_ddp.state_dict(),
         }, checkpoint_latest_path)
-        # run evaluation
+        # executa avaliação
         if epoch % args.eval_freq == 0 and epoch != 0:
             t1 = time.time()
             result = evaluate_crowd_no_overlap(model, data_loader_val, device)
@@ -189,14 +189,14 @@ def main(args):
 
             mae.append(result[0])
             mse.append(result[1])
-            # print the evaluation results
+            # imprime os resultados da avaliação
             print('=======================================test=======================================')
             print("mae:", result[0], "mse:", result[1], "time:", t2 - t1, "best mae:", np.min(mae), )
             with open(run_log_name, "a") as log_file:
                 log_file.write("mae:{}, mse:{}, time:{}, best mae:{}".format(result[0], 
                                 result[1], t2 - t1, np.min(mae)))
             print('=======================================test=======================================')
-            # recored the evaluation results
+            # registra os resultados da avaliação
             if writer is not None:
                 with open(run_log_name, "a") as log_file:
                     log_file.write("metric/mae@{}: {}".format(step, result[0]))
@@ -205,13 +205,13 @@ def main(args):
                 writer.add_scalar('metric/mse', result[1], step)
                 step += 1
 
-            # save the best model since begining
+            # salva o melhor modelo desde o início
             if abs(np.min(mae) - result[0]) < 0.01:
                 checkpoint_best_path = os.path.join(args.checkpoints_dir, 'best_mae.pth')
                 torch.save({
                     'model': model_without_ddp.state_dict(),
                 }, checkpoint_best_path)
-    # total time for training
+    # tempo total de treino
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))

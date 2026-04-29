@@ -1,8 +1,8 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Copyright (c) Facebook, Inc. e afiliadas. Todos os direitos reservados
 """
-Misc functions, including distributed helpers.
+Funções utilitárias, incluindo auxiliares para execução distribuída.
 
-Mostly copy-paste from torchvision references.
+Em grande parte copiadas/adaptadas de referências do torchvision.
 """
 import os
 import subprocess
@@ -20,16 +20,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-# needed due to empty tensor bug in pytorch and torchvision 0.5
+# necessário devido a bug de tensor vazio no pytorch e torchvision 0.5
 import torchvision
-if float(torchvision.__version__[:3]) < 0.7:
+_tv_major, _tv_minor = torchvision.__version__.split(".")[:2]
+_tv_version = (int(_tv_major), int(_tv_minor))
+if _tv_version < (0, 7):
     from torchvision.ops import _new_empty_tensor
     from torchvision.ops.misc import _output_size
 
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
-    window or the global series average.
+    """Rastreia uma série de valores e fornece acesso a valores suavizados
+    em uma janela ou à média global da série.
     """
 
     def __init__(self, window_size=20, fmt=None):
@@ -47,7 +49,7 @@ class SmoothedValue(object):
 
     def synchronize_between_processes(self):
         """
-        Warning: does not synchronize the deque!
+        Aviso: não sincroniza a deque!
         """
         if not is_dist_avail_and_initialized():
             return
@@ -91,31 +93,31 @@ class SmoothedValue(object):
 
 def all_gather(data):
     """
-    Run all_gather on arbitrary picklable data (not necessarily tensors)
+    Executa all_gather em dados serializáveis arbitrários (não necessariamente tensores).
     Args:
-        data: any picklable object
+        data: qualquer objeto serializável
     Returns:
-        list[data]: list of data gathered from each rank
+        list[data]: lista de dados coletados de cada rank
     """
     world_size = get_world_size()
     if world_size == 1:
         return [data]
 
-    # serialized to a Tensor
+    # serializado para um Tensor
     buffer = pickle.dumps(data)
     storage = torch.ByteStorage.from_buffer(buffer)
     tensor = torch.ByteTensor(storage).to("cuda")
 
-    # obtain Tensor size of each rank
+    # obtém o tamanho do Tensor de cada rank
     local_size = torch.tensor([tensor.numel()], device="cuda")
     size_list = [torch.tensor([0], device="cuda") for _ in range(world_size)]
     dist.all_gather(size_list, local_size)
     size_list = [int(size.item()) for size in size_list]
     max_size = max(size_list)
 
-    # receiving Tensor from all ranks
-    # we pad the tensor because torch all_gather does not support
-    # gathering tensors of different shapes
+    # recebe Tensor de todos os ranks
+    # fazemos padding porque torch all_gather não suporta
+    # coletar tensores com formatos diferentes
     tensor_list = []
     for _ in size_list:
         tensor_list.append(torch.empty((max_size,), dtype=torch.uint8, device="cuda"))
@@ -135,11 +137,11 @@ def all_gather(data):
 def reduce_dict(input_dict, average=True):
     """
     Args:
-        input_dict (dict): all the values will be reduced
-        average (bool): whether to do average or sum
-    Reduce the values in the dictionary from all processes so that all processes
-    have the averaged results. Returns a dict with the same fields as
-    input_dict, after reduction.
+        input_dict (dict): todos os valores serão reduzidos
+        average (bool): se deve fazer média ou soma
+    Reduz os valores no dicionário de todos os processos para que todos os processos
+    tenham os resultados médios. Retorna um dicionário com os mesmos campos de
+    input_dict, após a redução.
     """
     world_size = get_world_size()
     if world_size < 2:
@@ -147,7 +149,7 @@ def reduce_dict(input_dict, average=True):
     with torch.no_grad():
         names = []
         values = []
-        # sort the keys so that they are consistent across processes
+        # ordena as chaves para manter consistência entre processos
         for k in sorted(input_dict.keys()):
             names.append(k)
             values.append(input_dict[k])
@@ -275,7 +277,7 @@ def collate_fn(batch):
     return tuple(batch)
 
 def collate_fn_crowd(batch):
-    # re-organize the batch
+    # reorganiza o batch
     batch_new = []
     for b in batch:
         imgs, points = b
@@ -290,7 +292,7 @@ def collate_fn_crowd(batch):
 
 
 def _max_by_axis(the_list):
-    # type: (List[List[int]]) -> List[int]
+    # tipo: (List[List[int]]) -> List[int]
     maxes = the_list[0]
     for sublist in the_list[1:]:
         for index, item in enumerate(sublist):
@@ -298,7 +300,7 @@ def _max_by_axis(the_list):
     return maxes
 
 def _max_by_axis_pad(the_list):
-    # type: (List[List[int]]) -> List[int]
+    # tipo: (List[List[int]]) -> List[int]
     maxes = the_list[0]
     for sublist in the_list[1:]:
         for index, item in enumerate(sublist):
@@ -312,10 +314,10 @@ def _max_by_axis_pad(the_list):
 
 
 def nested_tensor_from_tensor_list(tensor_list: List[Tensor]):
-    # TODO make this more general
+    # TODO: tornar isto mais genérico
     if tensor_list[0].ndim == 3:
 
-        # TODO make it support different-sized images
+        # TODO: fazer suportar imagens de tamanhos diferentes
         max_size = _max_by_axis_pad([list(img.shape) for img in tensor_list])
         # min_size = tuple(min(s) for s in zip(*[img.shape for img in tensor_list]))
         batch_shape = [len(tensor_list)] + max_size
@@ -335,7 +337,7 @@ class NestedTensor(object):
         self.mask = mask
 
     def to(self, device):
-        # type: (Device) -> NestedTensor # noqa
+        # tipo: (Device) -> NestedTensor # noqa
         cast_tensor = self.tensors.to(device)
         mask = self.mask
         if mask is not None:
@@ -354,7 +356,7 @@ class NestedTensor(object):
 
 def setup_for_distributed(is_master):
     """
-    This function disables printing when not in master process
+    Esta função desabilita impressão quando não está no processo mestre.
     """
     import builtins as __builtin__
     builtin_print = __builtin__.print
@@ -423,7 +425,7 @@ def init_distributed_mode(args):
 
 @torch.no_grad()
 def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k"""
+    """Calcula precision@k para os valores de k especificados."""
     if target.numel() == 0:
         return [torch.zeros([], device=output.device)]
     maxk = max(topk)
@@ -441,13 +443,13 @@ def accuracy(output, target, topk=(1,)):
 
 
 def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corners=None):
-    # type: (Tensor, Optional[List[int]], Optional[float], str, Optional[bool]) -> Tensor
+    # tipo: (Tensor, Optional[List[int]], Optional[float], str, Optional[bool]) -> Tensor
     """
-    Equivalent to nn.functional.interpolate, but with support for empty batch sizes.
-    This will eventually be supported natively by PyTorch, and this
-    class can go away.
+    Equivalente a nn.functional.interpolate, mas com suporte para batches vazios.
+    Isso deverá ser suportado nativamente pelo PyTorch no futuro, e esta
+    classe poderá ser removida.
     """
-    if float(torchvision.__version__[:3]) < 0.7:
+    if _tv_version < (0, 7):
         if input.numel() > 0:
             return torch.nn.functional.interpolate(
                 input, size, scale_factor, mode, align_corners
@@ -462,20 +464,20 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
 
 class FocalLoss(nn.Module):
     r"""
-        This criterion is a implemenation of Focal Loss, which is proposed in
+        Este critério é uma implementação de Focal Loss, proposta em
         Focal Loss for Dense Object Detection.
 
             Loss(x, class) = - \alpha (1-softmax(x)[class])^gamma \log(softmax(x)[class])
 
-        The losses are averaged across observations for each minibatch.
+        As perdas são calculadas como média entre observações de cada minibatch.
 
         Args:
-            alpha(1D Tensor, Variable) : the scalar factor for this criterion
-            gamma(float, double) : gamma > 0; reduces the relative loss for well-classiﬁed examples (p > .5),
-                                   putting more focus on hard, misclassiﬁed examples
-            size_average(bool): By default, the losses are averaged over observations for each minibatch.
-                                However, if the field size_average is set to False, the losses are
-                                instead summed for each minibatch.
+            alpha(1D Tensor, Variable): fator escalar para este critério.
+            gamma(float, double): gamma > 0; reduz a perda relativa de exemplos bem classificados (p > .5),
+                                  dando mais foco a exemplos difíceis e mal classificados.
+            size_average(bool): por padrão, as perdas são médias sobre as observações de cada minibatch.
+                                Porém, se size_average for False, as perdas
+                                passam a ser somadas em cada minibatch.
 
 
     """

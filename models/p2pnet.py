@@ -12,7 +12,7 @@ from .matcher import build_matcher_crowd
 import numpy as np
 import time
 
-# the network frmawork of the regression branch
+# estrutura da rede do ramo de regressão
 class RegressionModel(nn.Module):
     def __init__(self, num_features_in, num_anchor_points=4, feature_size=256):
         super(RegressionModel, self).__init__()
@@ -30,7 +30,7 @@ class RegressionModel(nn.Module):
         self.act4 = nn.ReLU()
 
         self.output = nn.Conv2d(feature_size, num_anchor_points * 2, kernel_size=3, padding=1)
-    # sub-branch forward
+    # forward do sub-ramo
     def forward(self, x):
         out = self.conv1(x)
         out = self.act1(out)
@@ -44,7 +44,7 @@ class RegressionModel(nn.Module):
 
         return out.contiguous().view(out.shape[0], -1, 2)
 
-# the network frmawork of the classification branch
+# estrutura da rede do ramo de classificação
 class ClassificationModel(nn.Module):
     def __init__(self, num_features_in, num_anchor_points=4, num_classes=80, prior=0.01, feature_size=256):
         super(ClassificationModel, self).__init__()
@@ -66,7 +66,7 @@ class ClassificationModel(nn.Module):
 
         self.output = nn.Conv2d(feature_size, num_anchor_points * num_classes, kernel_size=3, padding=1)
         self.output_act = nn.Sigmoid()
-    # sub-branch forward
+    # forward do sub-ramo
     def forward(self, x):
         out = self.conv1(x)
         out = self.act1(out)
@@ -84,7 +84,7 @@ class ClassificationModel(nn.Module):
 
         return out2.contiguous().view(x.shape[0], -1, self.num_classes)
 
-# generate the reference points in grid layout
+# gera os pontos de referência em formato de grade
 def generate_anchor_points(stride=16, row=3, line=3):
     row_step = stride / row
     line_step = stride / line
@@ -99,7 +99,7 @@ def generate_anchor_points(stride=16, row=3, line=3):
     )).transpose()
 
     return anchor_points
-# shift the meta-anchor to get an acnhor points
+# desloca a meta-âncora para obter pontos de âncora
 def shift(shape, stride, anchor_points):
     shift_x = (np.arange(0, shape[1]) + 0.5) * stride
     shift_y = (np.arange(0, shape[0]) + 0.5) * stride
@@ -117,7 +117,7 @@ def shift(shape, stride, anchor_points):
 
     return all_anchor_points
 
-# this class generate all reference points on all pyramid levels
+# esta classe gera todos os pontos de referência em todos os níveis da pirâmide
 class AnchorPoints(nn.Module):
     def __init__(self, pyramid_levels=None, strides=None, row=3, line=3):
         super(AnchorPoints, self).__init__()
@@ -139,34 +139,31 @@ class AnchorPoints(nn.Module):
         image_shapes = [(image_shape + 2 ** x - 1) // (2 ** x) for x in self.pyramid_levels]
 
         all_anchor_points = np.zeros((0, 2)).astype(np.float32)
-        # get reference points for each level
+        # obtém pontos de referência para cada nível
         for idx, p in enumerate(self.pyramid_levels):
             anchor_points = generate_anchor_points(2**p, row=self.row, line=self.line)
             shifted_anchor_points = shift(image_shapes[idx], self.strides[idx], anchor_points)
             all_anchor_points = np.append(all_anchor_points, shifted_anchor_points, axis=0)
 
         all_anchor_points = np.expand_dims(all_anchor_points, axis=0)
-        # send reference points to device
-        if torch.cuda.is_available():
-            return torch.from_numpy(all_anchor_points.astype(np.float32)).cuda()
-        else:
-            return torch.from_numpy(all_anchor_points.astype(np.float32))
+        # mantém os pontos de âncora no mesmo device do tensor de entrada
+        return torch.from_numpy(all_anchor_points.astype(np.float32)).to(image.device)
 
 class Decoder(nn.Module):
     def __init__(self, C3_size, C4_size, C5_size, feature_size=256):
         super(Decoder, self).__init__()
 
-        # upsample C5 to get P5 from the FPN paper
+        # faz upsample de C5 para obter P5 da FPN
         self.P5_1 = nn.Conv2d(C5_size, feature_size, kernel_size=1, stride=1, padding=0)
         self.P5_upsampled = nn.Upsample(scale_factor=2, mode='nearest')
         self.P5_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=1, padding=1)
 
-        # add P5 elementwise to C4
+        # soma P5 elemento a elemento com C4
         self.P4_1 = nn.Conv2d(C4_size, feature_size, kernel_size=1, stride=1, padding=0)
         self.P4_upsampled = nn.Upsample(scale_factor=2, mode='nearest')
         self.P4_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=1, padding=1)
 
-        # add P4 elementwise to C3
+        # soma P4 elemento a elemento com C3
         self.P3_1 = nn.Conv2d(C3_size, feature_size, kernel_size=1, stride=1, padding=0)
         self.P3_upsampled = nn.Upsample(scale_factor=2, mode='nearest')
         self.P3_2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, stride=1, padding=1)
@@ -190,13 +187,13 @@ class Decoder(nn.Module):
 
         return [P3_x, P4_x, P5_x]
 
-# the defenition of the P2PNet model
+# definição do modelo P2PNet
 class P2PNet(nn.Module):
     def __init__(self, backbone, row=2, line=2):
         super().__init__()
         self.backbone = backbone
         self.num_classes = 2
-        # the number of all anchor points
+        # número total de pontos âncora
         num_anchor_points = row * line
 
         self.regression = RegressionModel(num_features_in=256, num_anchor_points=num_anchor_points)
@@ -209,17 +206,17 @@ class P2PNet(nn.Module):
         self.fpn = Decoder(256, 512, 512)
 
     def forward(self, samples: NestedTensor):
-        # get the backbone features
+        # obtém as features do backbone
         features = self.backbone(samples)
-        # forward the feature pyramid
+        # forward da pirâmide de features
         features_fpn = self.fpn([features[1], features[2], features[3]])
 
         batch_size = features[0].shape[0]
-        # run the regression and classification branch
+        # executa os ramos de regressão e classificação
         regression = self.regression(features_fpn[1]) * 100 # 8x
         classification = self.classification(features_fpn[1])
         anchor_points = self.anchor_points(samples).repeat(batch_size, 1, 1)
-        # decode the points as prediction
+        # decodifica os pontos como predição
         output_coord = regression + anchor_points
         output_class = classification
         out = {'pred_logits': output_class, 'pred_points': output_coord}
@@ -229,13 +226,13 @@ class P2PNet(nn.Module):
 class SetCriterion_Crowd(nn.Module):
 
     def __init__(self, num_classes, matcher, weight_dict, eos_coef, losses):
-        """ Create the criterion.
-        Parameters:
-            num_classes: number of object categories, omitting the special no-object category
-            matcher: module able to compute a matching between targets and proposals
-            weight_dict: dict containing as key the names of the losses and as values their relative weight.
-            eos_coef: relative classification weight applied to the no-object category
-            losses: list of all the losses to be applied. See get_loss for list of available losses.
+        """Cria o critério.
+        Parâmetros:
+            num_classes: número de categorias de objeto, omitindo a categoria especial de não-objeto.
+            matcher: módulo capaz de computar um matching entre alvos e propostas.
+            weight_dict: dicionário contendo como chave os nomes das perdas e como valores seus pesos relativos.
+            eos_coef: peso relativo de classificação aplicado à categoria de não-objeto.
+            losses: lista de todas as perdas a serem aplicadas. Veja get_loss para a lista de perdas disponíveis.
         """
         super().__init__()
         self.num_classes = num_classes
@@ -248,8 +245,8 @@ class SetCriterion_Crowd(nn.Module):
         self.register_buffer('empty_weight', empty_weight)
 
     def loss_labels(self, outputs, targets, indices, num_points):
-        """Classification loss (NLL)
-        targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
+        """Perda de classificação (NLL).
+        Os dicionários de alvo devem conter a chave "labels" com um tensor de dimensão [nb_target_boxes].
         """
         assert 'pred_logits' in outputs
         src_logits = outputs['pred_logits']
@@ -280,13 +277,13 @@ class SetCriterion_Crowd(nn.Module):
         return losses
 
     def _get_src_permutation_idx(self, indices):
-        # permute predictions following indices
+        # permuta predições seguindo os índices
         batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
         src_idx = torch.cat([src for (src, _) in indices])
         return batch_idx, src_idx
 
     def _get_tgt_permutation_idx(self, indices):
-        # permute targets following indices
+        # permuta targets seguindo os índices
         batch_idx = torch.cat([torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
         tgt_idx = torch.cat([tgt for (_, tgt) in indices])
         return batch_idx, tgt_idx
@@ -300,11 +297,12 @@ class SetCriterion_Crowd(nn.Module):
         return loss_map[loss](outputs, targets, indices, num_points, **kwargs)
 
     def forward(self, outputs, targets):
-        """ This performs the loss computation.
-        Parameters:
-             outputs: dict of tensors, see the output specification of the model for the format
-             targets: list of dicts, such that len(targets) == batch_size.
-                      The expected keys in each dict depends on the losses applied, see each loss' doc
+        """Executa o cálculo da perda.
+        Parâmetros:
+             outputs: dicionário de tensores; veja a especificação de saída do modelo para o formato.
+             targets: lista de dicionários, tal que len(targets) == batch_size.
+                      As chaves esperadas em cada dicionário dependem das perdas aplicadas;
+                      veja a documentação de cada perda.
         """
         output1 = {'pred_logits': outputs['pred_logits'], 'pred_points': outputs['pred_points']}
 
@@ -322,9 +320,9 @@ class SetCriterion_Crowd(nn.Module):
 
         return losses
 
-# create the P2PNet model
+# cria o modelo P2PNet
 def build(args, training):
-    # treats persons as a single class
+    # trata pessoas como uma única classe
     num_classes = 1
 
     backbone = build_backbone(args)

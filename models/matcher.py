@@ -1,7 +1,7 @@
 
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Copyright (c) Facebook, Inc. e afiliadas. Todos os direitos reservados
 """
-Mostly copy-paste from DETR (https://github.com/facebookresearch/detr).
+Em grande parte copiado/adaptado do DETR (https://github.com/facebookresearch/detr).
 """
 import torch
 from scipy.optimize import linear_sum_assignment
@@ -9,19 +9,20 @@ from torch import nn
 
 
 class HungarianMatcher_Crowd(nn.Module):
-    """This class computes an assignment between the targets and the predictions of the network
+    """Esta classe calcula uma associação entre os alvos e as predições da rede.
 
-    For efficiency reasons, the targets don't include the no_object. Because of this, in general,
-    there are more predictions than targets. In this case, we do a 1-to-1 matching of the best predictions,
-    while the others are un-matched (and thus treated as non-objects).
+    Por motivos de eficiência, os alvos não incluem a classe `no_object`.
+    Por isso, em geral, há mais predições do que alvos. Nesse caso, fazemos
+    um matching 1-para-1 das melhores predições, enquanto as demais ficam
+    sem correspondência (e são tratadas como não-objetos).
     """
 
     def __init__(self, cost_class: float = 1, cost_point: float = 1):
-        """Creates the matcher
+        """Cria o matcher.
 
-        Params:
-            cost_class: This is the relative weight of the foreground object
-            cost_point: This is the relative weight of the L1 error of the points coordinates in the matching cost
+        Parâmetros:
+            cost_class: peso relativo do objeto de primeiro plano.
+            cost_point: peso relativo do erro L1 das coordenadas dos pontos no custo de matching.
         """
         super().__init__()
         self.cost_class = cost_class
@@ -30,47 +31,49 @@ class HungarianMatcher_Crowd(nn.Module):
 
     @torch.no_grad()
     def forward(self, outputs, targets):
-        """ Performs the matching
+        """Executa o matching.
 
-        Params:
-            outputs: This is a dict that contains at least these entries:
-                 "pred_logits": Tensor of dim [batch_size, num_queries, num_classes] with the classification logits
-                 "points": Tensor of dim [batch_size, num_queries, 2] with the predicted point coordinates
+        Parâmetros:
+            outputs: dicionário com pelo menos:
+                 "pred_logits": Tensor com dimensão [batch_size, num_queries, num_classes]
+                                contendo os logits de classificação.
+                 "points": Tensor com dimensão [batch_size, num_queries, 2]
+                           contendo as coordenadas de pontos previstas.
 
-            targets: This is a list of targets (len(targets) = batch_size), where each target is a dict containing:
-                 "labels": Tensor of dim [num_target_points] (where num_target_points is the number of ground-truth
-                           objects in the target) containing the class labels
-                 "points": Tensor of dim [num_target_points, 2] containing the target point coordinates
+            targets: lista de alvos (len(targets) = batch_size), em que cada alvo é um dicionário contendo:
+                 "labels": Tensor com dimensão [num_target_points] (onde num_target_points é o número de objetos
+                           de ground-truth no alvo) contendo os rótulos de classe.
+                 "points": Tensor com dimensão [num_target_points, 2] contendo as coordenadas de pontos-alvo.
 
-        Returns:
-            A list of size batch_size, containing tuples of (index_i, index_j) where:
-                - index_i is the indices of the selected predictions (in order)
-                - index_j is the indices of the corresponding selected targets (in order)
-            For each batch element, it holds:
+        Retorna:
+            Uma lista de tamanho batch_size, contendo tuplas (index_i, index_j), em que:
+                - index_i são os índices das predições selecionadas (em ordem)
+                - index_j são os índices dos alvos correspondentes (em ordem)
+            Para cada elemento do batch:
                 len(index_i) = len(index_j) = min(num_queries, num_target_points)
         """
         bs, num_queries = outputs["pred_logits"].shape[:2]
 
-        # We flatten to compute the cost matrices in a batch
+        # Achatamos para calcular as matrizes de custo em batch
         out_prob = outputs["pred_logits"].flatten(0, 1).softmax(-1)  # [batch_size * num_queries, num_classes]
         out_points = outputs["pred_points"].flatten(0, 1)  # [batch_size * num_queries, 2]
 
-        # Also concat the target labels and points
+        # Também concatena os rótulos e pontos alvo
         # tgt_ids = torch.cat([v["labels"] for v in targets])
         tgt_ids = torch.cat([v["labels"] for v in targets])
         tgt_points = torch.cat([v["point"] for v in targets])
 
-        # Compute the classification cost. Contrary to the loss, we don't use the NLL,
-        # but approximate it in 1 - proba[target class].
-        # The 1 is a constant that doesn't change the matching, it can be ommitted.
+        # Calcula o custo de classificação. Diferente da loss, não usamos NLL,
+        # e sim uma aproximação em 1 - proba[classe alvo].
+        # O 1 é uma constante que não altera o matching, pode ser omitida.
         cost_class = -out_prob[:, tgt_ids]
 
-        # Compute the L2 cost between point
+        # Calcula o custo L2 entre pontos
         cost_point = torch.cdist(out_points, tgt_points, p=2)
 
-        # Compute the giou cost between point
+        # Calcula o custo giou entre pontos
 
-        # Final cost matrix
+        # Matriz de custo final
         C = self.cost_point * cost_point + self.cost_class * cost_class
         C = C.view(bs, num_queries, -1).cpu()
 

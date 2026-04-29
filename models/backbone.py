@@ -1,6 +1,6 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Copyright (c) Facebook, Inc. e afiliadas. Todos os direitos reservados
 """
-Backbone modules.
+Módulos de backbone.
 """
 from collections import OrderedDict
 
@@ -50,12 +50,12 @@ class BackboneBase_VGG(nn.Module):
 
 
 class Backbone_VGG(BackboneBase_VGG):
-    """ResNet backbone with frozen BatchNorm."""
+    """Backbone VGG com BatchNorm congelada."""
     def __init__(self, name: str, return_interm_layers: bool):
         if name == 'vgg16_bn':
-            backbone = models.vgg16_bn(pretrained=True)
+            backbone = models.vgg16_bn(pretrained=False)
         elif name == 'vgg16':
-            backbone = models.vgg16(pretrained=True)
+            backbone = models.vgg16(pretrained=False)
         num_channels = 256
         super().__init__(backbone, num_channels, name, return_interm_layers)
 

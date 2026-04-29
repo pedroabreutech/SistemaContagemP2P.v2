@@ -1,6 +1,6 @@
 from .p2pnet import build
 
-# build the P2PNet model
-# set training to 'True' during training
+# constrói o modelo P2PNet
+# defina training como 'True' durante o treino
 def build_model(args, training=False):
     return build(args, training)

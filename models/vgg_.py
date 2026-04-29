@@ -1,6 +1,6 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Copyright (c) Facebook, Inc. e afiliadas. Todos os direitos reservados
 """
-Mostly copy-paste from torchvision references.
+Em grande parte copiado/adaptado de referências do torchvision.
 """
 import torch
 import torch.nn as nn
@@ -109,88 +109,88 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, sync=False, **kwargs):
 
 
 def vgg11(pretrained=False, progress=True, **kwargs):
-    r"""VGG 11-layer model (configuration "A") from
+    r"""Modelo VGG de 11 camadas (configuração "A") de
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg11', 'A', False, pretrained, progress, **kwargs)
 
 
 def vgg11_bn(pretrained=False, progress=True, **kwargs):
-    r"""VGG 11-layer model (configuration "A") with batch normalization
+    r"""Modelo VGG de 11 camadas (configuração "A") com normalização em batch
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg11_bn', 'A', True, pretrained, progress, **kwargs)
 
 
 def vgg13(pretrained=False, progress=True, **kwargs):
-    r"""VGG 13-layer model (configuration "B")
+    r"""Modelo VGG de 13 camadas (configuração "B")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg13', 'B', False, pretrained, progress, **kwargs)
 
 
 def vgg13_bn(pretrained=False, progress=True, **kwargs):
-    r"""VGG 13-layer model (configuration "B") with batch normalization
+    r"""Modelo VGG de 13 camadas (configuração "B") com normalização em batch
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg13_bn', 'B', True, pretrained, progress, **kwargs)
 
 
 def vgg16(pretrained=False, progress=True, **kwargs):
-    r"""VGG 16-layer model (configuration "D")
+    r"""Modelo VGG de 16 camadas (configuração "D")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg16', 'D', False, pretrained, progress, **kwargs)
 
 
 def vgg16_bn(pretrained=False, progress=True, sync=False, **kwargs):
-    r"""VGG 16-layer model (configuration "D") with batch normalization
+    r"""Modelo VGG de 16 camadas (configuração "D") com normalização em batch
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg16_bn', 'D', True, pretrained, progress, sync=sync, **kwargs)
 
 
 def vgg19(pretrained=False, progress=True, **kwargs):
-    r"""VGG 19-layer model (configuration "E")
+    r"""Modelo VGG de 19 camadas (configuração "E")
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg19', 'E', False, pretrained, progress, **kwargs)
 
 
 def vgg19_bn(pretrained=False, progress=True, **kwargs):
-    r"""VGG 19-layer model (configuration 'E') with batch normalization
+    r"""Modelo VGG de 19 camadas (configuração "E") com normalização em batch
     `"Very Deep Convolutional Networks For Large-Scale Image Recognition" <https://arxiv.org/pdf/1409.1556.pdf>`_
 
     Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+        pretrained (bool): Se True, retorna um modelo pré-treinado no ImageNet
+        progress (bool): Se True, exibe uma barra de progresso do download no stderr
     """
     return _vgg('vgg19_bn', 'E', True, pretrained, progress, **kwargs)

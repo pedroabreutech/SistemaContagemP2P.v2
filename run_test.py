@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 def get_args_parser():
     parser = argparse.ArgumentParser('Set parameters for P2PNet evaluation', add_help=False)
     
-    # * Backbone
+    # * Extrator de características (Backbone)
     parser.add_argument('--backbone', default='vgg16_bn', type=str,
                         help="name of the convolutional backbone to use")
 
@@ -40,60 +40,68 @@ def get_args_parser():
 
 def main(args, debug=False):
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '{}'.format(args.gpu_id)
-
     print(args)
-    device = torch.device('cuda')
-    # get the P2PNet
+    if torch.cuda.is_available():
+        os.environ["CUDA_VISIBLE_DEVICES"] = '{}'.format(args.gpu_id)
+        device = torch.device('cuda')
+    elif torch.backends.mps.is_available():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    # obtém o P2PNet
     model = build_model(args)
-    # move to GPU
+    # move para GPU/CPU
     model.to(device)
-    # load trained model
+    # carrega o modelo treinado
     if args.weight_path is not None:
-        checkpoint = torch.load(args.weight_path, map_location='cpu')
+        checkpoint = torch.load(args.weight_path, map_location=device)
         model.load_state_dict(checkpoint['model'])
-    # convert to eval mode
+    # define modo de avaliação
     model.eval()
-    # create the pre-processing transform
+    # cria a transformação de pré-processamento
     transform = standard_transforms.Compose([
         standard_transforms.ToTensor(), 
         standard_transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    # set your image path here
-    img_path = "./vis/demo1.jpg"
-    # load the images
+    # defina aqui o caminho da imagem
+    img_path = "./vis/Contagem_manual_8020_aproximada.jpg"
+    # carrega a imagem
     img_raw = Image.open(img_path).convert('RGB')
-    # round the size
+    # ajusta o tamanho para múltiplos de 128
     width, height = img_raw.size
     new_width = width // 128 * 128
     new_height = height // 128 * 128
-    img_raw = img_raw.resize((new_width, new_height), Image.ANTIALIAS)
-    # pre-proccessing
+    try:
+        resample_filter = Image.Resampling.LANCZOS
+    except AttributeError:
+        resample_filter = Image.LANCZOS
+    img_raw = img_raw.resize((new_width, new_height), resample_filter)
+    # pré-processamento
     img = transform(img_raw)
 
     samples = torch.Tensor(img).unsqueeze(0)
     samples = samples.to(device)
-    # run inference
+    # executa inferência
     outputs = model(samples)
     outputs_scores = torch.nn.functional.softmax(outputs['pred_logits'], -1)[:, :, 1][0]
 
     outputs_points = outputs['pred_points'][0]
 
     threshold = 0.5
-    # filter the predictions
+    # filtra as predições
     points = outputs_points[outputs_scores > threshold].detach().cpu().numpy().tolist()
     predict_cnt = int((outputs_scores > threshold).sum())
 
     outputs_scores = torch.nn.functional.softmax(outputs['pred_logits'], -1)[:, :, 1][0]
 
     outputs_points = outputs['pred_points'][0]
-    # draw the predictions
+    # desenha as predições
     size = 2
     img_to_draw = cv2.cvtColor(np.array(img_raw), cv2.COLOR_RGB2BGR)
     for p in points:
         img_to_draw = cv2.circle(img_to_draw, (int(p[0]), int(p[1])), size, (0, 0, 255), -1)
-    # save the visualized image
+    # salva a imagem visualizada
     cv2.imwrite(os.path.join(args.output_dir, 'pred{}.jpg'.format(predict_cnt)), img_to_draw)
 
 if __name__ == '__main__':

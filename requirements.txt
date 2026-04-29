@@ -3,8 +3,12 @@ torchvision
 tensorboardX
 easydict
 pandas
-numpy
+numpy<2
 scipy
 matplotlib
 Pillow
-opencv-python
+opencv-python<4.9
+streamlit
+fastapi
+uvicorn
+python-multipart
