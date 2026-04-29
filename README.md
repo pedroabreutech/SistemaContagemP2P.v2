@@ -1,3 +1,357 @@
+# Sistema de Contagem de Pessoas (P2PNet)
+
+Este projeto disponibiliza um modelo de contagem de pessoas com duas formas de uso:
+
+- API HTTP com FastAPI (uso recomendado para integracoes)
+- Interface visual com Streamlit (uso local/manual)
+
+O objetivo deste README e guiar o proximo desenvolvedor no setup completo e no uso da API, de forma pratica.
+
+## 1) Pre-requisitos
+
+- macOS, Linux ou Windows
+- Python 3.9+
+- Git
+- Arquivo de pesos do modelo (`.pth`), por padrao em `weights/SHTechA.pth`
+
+> Sem o arquivo de pesos a aplicacao sobe, mas a inferencia falha no endpoint de predicao.
+
+## 2) Clonar o projeto
+
+```bash
+git clone https://github.com/pedroabreutech/SistemaContagemP2P.v1.git
+cd "SistemaContagemP2P.v1"
+```
+
+## 3) Criar ambiente virtual e instalar dependencias
+
+### macOS/Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Windows (PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## 4) Estrutura minima esperada
+
+```text
+SistemaContagemP2P.v1/
+|- api.py
+|- app.py
+|- requirements.txt
+`- weights/
+   `- SHTechA.pth
+```
+
+## 5) Executar a API (FastAPI)
+
+Suba o servidor:
+
+```bash
+python -m uvicorn api:app --host 0.0.0.0 --port 8001
+```
+
+Se a porta `8001` estiver ocupada, troque para outra (ex.: `8002`).
+
+### Endpoints disponiveis
+
+- `GET /health` -> status do servico
+- `POST /predict` -> envia imagem e recebe contagem
+
+### Documentacao automatica
+
+Com a API rodando:
+
+- Swagger UI: `http://localhost:8001/docs`
+- OpenAPI JSON: `http://localhost:8001/openapi.json`
+
+## 6) Testar rapidamente a API
+
+### Healthcheck
+
+```bash
+curl -s http://127.0.0.1:8001/health
+```
+
+Resposta esperada:
+
+```json
+{"status":"ok"}
+```
+
+### Predicao com imagem
+
+```bash
+curl -X POST "http://127.0.0.1:8001/predict" \
+  -F "file=@/caminho/da/sua_imagem.jpg" \
+  -F "threshold=0.5" \
+  -F "weight_path=./weights/SHTechA.pth"
+```
+
+Campos de entrada:
+
+- `file` (obrigatorio): imagem `.jpg`, `.jpeg` ou `.png`
+- `threshold` (opcional): limiar de confianca entre `0.1` e `0.9` (padrao `0.5`)
+- `weight_path` (opcional): caminho do peso `.pth` (padrao `./weights/SHTechA.pth`)
+
+Exemplo de resposta:
+
+```json
+{
+  "count": 37,
+  "points": [[120.4, 88.1], [141.2, 92.7]],
+  "threshold": 0.5,
+  "device": "cpu",
+  "input_size": {"width": 1920, "height": 1080},
+  "processed_size": {"width": 1792, "height": 1024},
+  "filename": "foto.jpg"
+}
+```
+
+## 7) Executar interface Streamlit (opcional)
+
+```bash
+python -m streamlit run app.py
+```
+
+A interface abre no navegador (geralmente `http://localhost:8501` ou `8502`).
+
+## 8) Problemas comuns (e solucao)
+
+### Erro: `Numpy is not available`
+
+Use as versoes ja fixadas no `requirements.txt`:
+
+- `numpy<2`
+- `opencv-python<4.9`
+
+Depois reinstale:
+
+```bash
+pip install -r requirements.txt --force-reinstall
+```
+
+### Erro: peso nao encontrado
+
+Mensagem tipica: `Arquivo de pesos nao encontrado`
+
+Solucao:
+
+- confirmar se o arquivo existe em `weights/SHTechA.pth`, ou
+- enviar o caminho correto no campo `weight_path` do `/predict`
+
+### Porta em uso
+
+Troque a porta no `uvicorn`:
+
+```bash
+python -m uvicorn api:app --host 0.0.0.0 --port 8002
+```
+
+## 9) Fluxo recomendado para outro desenvolvedor
+
+1. Clonar repositorio
+2. Criar/ativar `.venv`
+3. Instalar `requirements.txt`
+4. Garantir arquivo `.pth` em `weights/`
+5. Subir FastAPI com `uvicorn`
+6. Validar `GET /health`
+7. Testar `POST /predict` com imagem real
+
+## 10) Creditos
+
+Este projeto deriva do P2PNet original:
+
+- Paper: [Rethinking Counting and Localization in Crowds: A Purely Point-Based Framework](https://arxiv.org/abs/2107.12746)
+- Repositorio base: [TencentYoutuResearch/CrowdCounting-P2PNet](https://github.com/TencentYoutuResearch/CrowdCounting-P2PNet)
+# Sistema de Contagem de Pessoas (P2PNet)
+
+Este projeto disponibiliza um modelo de contagem de pessoas com duas formas de uso:
+
+- API HTTP com FastAPI (uso recomendado para integracoes)
+- Interface visual com Streamlit (uso local/manual)
+
+O objetivo deste README e guiar o proximo desenvolvedor no setup completo e no uso da API, de forma pratica.
+
+## 1) Pre-requisitos
+
+- macOS, Linux ou Windows
+- Python 3.9+
+- Git
+- Arquivo de pesos do modelo (`.pth`), por padrao em `weights/SHTechA.pth`
+
+> Sem o arquivo de pesos a aplicacao sobe, mas a inferencia falha no endpoint de predicao.
+
+## 2) Clonar o projeto
+
+```bash
+git clone https://github.com/pedroabreutech/SistemaContagemP2P.v1.git
+cd "SistemaContagemP2P.v1"
+```
+
+## 3) Criar ambiente virtual e instalar dependencias
+
+### macOS/Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Windows (PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## 4) Estrutura minima esperada
+
+```text
+SistemaContagemP2P.v1/
+|- api.py
+|- app.py
+|- requirements.txt
+`- weights/
+   `- SHTechA.pth
+```
+
+## 5) Executar a API (FastAPI)
+
+Suba o servidor:
+
+```bash
+python -m uvicorn api:app --host 0.0.0.0 --port 8001
+```
+
+Se a porta `8001` estiver ocupada, troque para outra (ex.: `8002`).
+
+### Endpoints disponiveis
+
+- `GET /health` -> status do servico
+- `POST /predict` -> envia imagem e recebe contagem
+
+### Documentacao automatica
+
+Com a API rodando:
+
+- Swagger UI: `http://localhost:8001/docs`
+- OpenAPI JSON: `http://localhost:8001/openapi.json`
+
+## 6) Testar rapidamente a API
+
+### Healthcheck
+
+```bash
+curl -s http://127.0.0.1:8001/health
+```
+
+Resposta esperada:
+
+```json
+{"status":"ok"}
+```
+
+### Predicao com imagem
+
+```bash
+curl -X POST "http://127.0.0.1:8001/predict" \
+  -F "file=@/caminho/da/sua_imagem.jpg" \
+  -F "threshold=0.5" \
+  -F "weight_path=./weights/SHTechA.pth"
+```
+
+Campos de entrada:
+
+- `file` (obrigatorio): imagem `.jpg`, `.jpeg` ou `.png`
+- `threshold` (opcional): limiar de confianca entre `0.1` e `0.9` (padrao `0.5`)
+- `weight_path` (opcional): caminho do peso `.pth` (padrao `./weights/SHTechA.pth`)
+
+Exemplo de resposta:
+
+```json
+{
+  "count": 37,
+  "points": [[120.4, 88.1], [141.2, 92.7]],
+  "threshold": 0.5,
+  "device": "cpu",
+  "input_size": {"width": 1920, "height": 1080},
+  "processed_size": {"width": 1792, "height": 1024},
+  "filename": "foto.jpg"
+}
+```
+
+## 7) Executar interface Streamlit (opcional)
+
+```bash
+python -m streamlit run app.py
+```
+
+A interface abre no navegador (geralmente `http://localhost:8501` ou `8502`).
+
+## 8) Problemas comuns (e solucao)
+
+### Erro: `Numpy is not available`
+
+Use as versoes ja fixadas no `requirements.txt`:
+
+- `numpy<2`
+- `opencv-python<4.9`
+
+Depois reinstale:
+
+```bash
+pip install -r requirements.txt --force-reinstall
+```
+
+### Erro: peso nao encontrado
+
+Mensagem tipica: `Arquivo de pesos nao encontrado`
+
+Solucao:
+
+- confirmar se o arquivo existe em `weights/SHTechA.pth`, ou
+- enviar o caminho correto no campo `weight_path` do `/predict`
+
+### Porta em uso
+
+Troque a porta no `uvicorn`:
+
+```bash
+python -m uvicorn api:app --host 0.0.0.0 --port 8002
+```
+
+## 9) Fluxo recomendado para outro desenvolvedor
+
+1. Clonar repositorio
+2. Criar/ativar `.venv`
+3. Instalar `requirements.txt`
+4. Garantir arquivo `.pth` em `weights/`
+5. Subir FastAPI com `uvicorn`
+6. Validar `GET /health`
+7. Testar `POST /predict` com imagem real
+
+## 10) Creditos
+
+Este projeto deriva do P2PNet original:
+
+- Paper: [Rethinking Counting and Localization in Crowds: A Purely Point-Based Framework](https://arxiv.org/abs/2107.12746)
+- Repositorio base: [TencentYoutuResearch/CrowdCounting-P2PNet](https://github.com/TencentYoutuResearch/CrowdCounting-P2PNet)
 # P2PNet (ICCV2021 Oral Presentation)
 
 This repository contains codes for the official implementation in PyTorch of **P2PNet** as described in [Rethinking Counting and Localization in Crowds: A Purely Point-Based Framework](https://arxiv.org/abs/2107.12746).
